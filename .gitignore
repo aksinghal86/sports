@@ -1,3 +1,11 @@
+# HTML files
+**/*.html
+
+# Data and rsconnect
+nba/2021-22/data
+nba/2021-22/rsconnect
+
+
 # History files
 .Rhistory
 .Rapp.history

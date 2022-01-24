@@ -1,0 +1,193 @@
+---
+title: "Steph Curry's Recent Slump"
+description:
+  "Investigating Stephen Curry's mid-season shooting slump in the 2021-22 season"
+date: January 23, 2018
+author: 
+  - first_name: "Ankur"
+    last_name: "Singhal"
+    url: https://www.github.com/aksinghal86
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F)
+
+library(tidyverse, quietly = T)
+library(geomtextpath)
+```
+
+It's no secret that [Steph Curry](https://www.nba.com/player/201939/stephen-curry/profile) has been going through a bit of a slump of late. The three pointers that used to go in are clanking at an unusual rate. He is shooting a career low 38.4% on threes this season (except for the 2019-20 season in which he only played five games). Since the Knicks game, when he broke Ray Allen's all-time 3 point record, Curry has played in 15 games (not including the latest Jazz game) ^[I chose 15 games because of convenience -- it was the easiest split to get data for from NBA stats -- and because qualitatively, the slump became more noticeable after that]. Let's call these the Curry slump games. In these games, Curry has taken a total of 174 3-pointers and has made 61 of them, good for only 35.1%. This is a lowly number (about 8 percentage points lower) for a career 42.9% three point shooter. For reference, this number is closer to Myles Turner's career 3 point shooting average (34.9%) -- by no means a marksmen like Curry -- and definitely not indicative of the 2-time MVP we have so gotten used to. 
+
+So, what's going on? Sure, part of it is Draymond being injured and the other part is Klay being gone. But, Dray missed some games last year and I don't need to tell you about Klay. Last year, even with a much much inferior supporting cast, Curry was putting up better numbers statistically. So, we can't blame it on that either. 
+
+My theory is that the slump is in-part due to Curry himself, in-part due to coaching, and in-part due to other factors like off-season rule changes. Below I explore each of these hypotheses. 
+
+But, first, a comparison between last year and this year ^[The season before that (2019-20) Curry only played five games, and the season before (2018-19) we obviously had both Klay and Durant making the comparisons prior to last season somewhat nonsensical].  
+
+```{r}
+by_game <- readxl::read_excel('data/Curry 01.22.2022.xlsx', sheet = 'by game') %>% 
+  janitor::clean_names()
+```
+
+
+```{r, message=F, warning=F}
+# Curry has played in 42 games so far 
+ggplot(by_game, aes(x = game, y = x3p_percent, color = year)) + 
+  geom_point(alpha = 0.2) + 
+  geom_line(aes(y = zoo::rollmean(x3p_percent, 7, na.pad = T)), alpha = 0.6) +
+  geomtextpath::geom_textsmooth(aes(label = year), method = 'loess', formula = y ~ x, span = 0.6,  se = F, 
+                                linewidth = 1, hjust = 'xmin', size = 4) +
+  labs(x = 'Game', y = '3 PT %', title = "Steph Curry's 3 PT % between this season and last season") + 
+  # scale_color_manual(values = c("#00AFBB", "#E7B800")) +
+  theme_bw() + 
+  theme(legend.position = 'none')
+```
+
+Amazingly, Curry had a similar slump last year, which followed almost exactly the same trajectory. About 15 games into this season and 20 games into last season, he started slumping, which catered out at nearly the exact same time at about game 35 and he started picking it back up peaking again at about game 50. Last season was a shortened season so here is to hoping that he finishes the year strong this time around. 
+
+As I mentioned earlier, this could be due to the coaching staff experimenting a bit in the middle of the season. Last year, it was a bit of trying to fit in James Wiseman; this year, the Warriors have played a bunch of different starting lineups featuring Curry, which may be affecting his rhythm. The concerning thing though is the bias, i.e., the slump is consistently a few percentage points (about 4%) lower than it was last year.
+
+The first question that comes to mind: Is Curry just taking more of the bad, contested type shots than previous years. Thankfully, [NBA](www.nba.com) provides tracking data which can be used to evaluate this. In the graph below, I have plotted 3 pointers taken by Curry from the last season, this season and the Curry slump games (again, this doesn't include today's Jazz game). Curry has actually taken fewer highly contested 3 pointers (with the closest defender within 4 feet) this season and during the slump than last season, and contrary to my priors, has actually taken more open and wide open shots this year. He is just making a lot less of them.  
+
+```{r}
+tracking <- readxl::read_excel('data/Curry 01.22.2022.xlsx', sheet = 'tracking') %>% 
+  janitor::clean_names() %>% 
+  filter(shot_distance == 'All shots')
+  
+```
+
+
+```{r}
+tracking %>% 
+  mutate(x3p_freq = x3p_freq*100) %>% 
+  ggplot(aes(x = closest_defender, y = x3p_freq, fill = season)) + 
+  geom_bar(stat = 'identity', position = 'dodge', alpha = 0.8) +
+  geom_text(aes(label = x3p_freq), position = position_dodge(0.9), vjust = -0.5, size = 3.5) + 
+  coord_cartesian(ylim = c(0, 35)) + 
+  labs(x = 'Closest defender', y = '3 PT frequency (%)', title = 'Quality of 3 Pointers taken by Steph Curry') +
+  scale_fill_manual(values = c("#00AFBB", "#E7B800", "#FC4E07")) +
+  guides(fill = guide_legend(title = 'Period')) + 
+  theme_bw()
+```
+
+```{r}
+shot_dist <- readxl::read_excel('data/Curry 01.22.2022.xlsx', sheet = 'shot distance') %>% 
+  janitor::clean_names() %>% 
+  filter(delta == '8 ft', 
+         shot_distance != 'Back Court Shot') %>% 
+  mutate(shot_distance = factor(shot_distance, levels = c('Less Than 8 ft.', '8-16 ft.', '16-24 ft.', '24+ ft.')))
+```
+
+One possibility is that this is a slump in isolation; the other that this is tied to his bigger game because one of the things I have noticed this year is that Curry is driving to the hoop less and the floaters have become a rare rather than a usual occurrence. At least to me, it seems like there is a higher proportion of 3 pointers in his game this season than close range layups and floaters. And I personally believe that there is something to the notion that seeing the basketball go through the hoop boosts one's confidence. So, Curry driving to the hoop fewer times per game and missing out on the somewhat easier close range buckets is perhaps affecting his ability to shoot the three ball well. 
+
+To test this hypothesis, I again used data from NBA stats, where they track the distance of each shot. 
+
+```{r}
+shot_dist %>% 
+  group_by(year, shot_distance) %>% 
+  mutate(fga_per_game = fga/n_games) %>% 
+  ggplot(aes(x = shot_distance, y = fga_per_game, fill = year)) + 
+  geom_bar(position = 'dodge', stat = 'identity', alpha = 0.8) + 
+  geom_text(aes(label = round(fga_per_game, 1)), position = position_dodge(0.9), vjust = -0.5, size = 3.5) + 
+  labs(x = 'Shot distance', y = 'FGA per game', title = "Steph Curry Field Goal Attempts Per Game") + 
+  coord_cartesian(ylim = c(0, 14)) + 
+  scale_fill_manual(values = c("#00AFBB", "#E7B800", "#FC4E07")) +
+  guides(fill = guide_legend(title = 'Period')) + 
+  theme_bw() 
+```
+
+Curry is in fact taking fewer shots under 8 feet this season and even fewer during the slump. He has taken 12% fewer shots less than 16 ft (essentially, short distance shots) this season and a whole 30% fewer during the slump ^[The mid-range has never been a big part of Curry's game -- nevertheless those numbers are fairly similar all across]. The numbers do confirm the eye test that Curry is taking fewer of the short-distance shots. Oh, by the way, Curry is also taking one less floater per game this season (and during the slump) than last season. 
+
+This may be partly driven by the rule changes causing Curry to draw fewer foul calls and therefore making him less likely to drive to the hoop. Curry is flashy around the rim and sometimes getting the call is an important part of the cost-benefit risk calculus for a smaller guard like him to pursue driving to the hoop. He is in fact making those same shots under 8 ft at about 10% less efficiency this year compared to last year. This is not necessarily symptomatic since it could also just be a part of his bigger slump, but I do believe that it is a factor in his 3 point efficiency slump. 
+
+```{r}
+ggplot(shot_dist, aes(x = shot_distance, y = fg_percent, fill = year)) + 
+  geom_bar(position = 'dodge', stat = 'identity', alpha = 0.8) + 
+  geom_text(aes(label = fg_percent), position = position_dodge(0.9), vjust = -0.5, size = 3.5) + 
+  labs(x = 'Shot distance', y = 'FG %', title = "Steph Curry Field Goal Percentage Per Game") + 
+  coord_cartesian(ylim = c(0, 65)) +
+  scale_fill_manual(values = c("#00AFBB", "#E7B800", "#FC4E07")) +
+  guides(fill = guide_legend(title = 'Period')) + 
+  theme_bw() 
+```
+
+
+
+```{r, include=F}
+tracking %>% 
+  mutate(x2p_freq = x2p_freq*100) %>% 
+  ggplot(aes(x = closest_defender, y = x2p_freq, fill = season)) + 
+  geom_bar(stat = 'identity', position = 'dodge', alpha = 0.8) +
+  geom_text(aes(label = x2p_freq), position = position_dodge(0.9), vjust = -0.8, size = 3) + 
+  coord_cartesian(ylim = c(0, 0.3)) + 
+  scale_fill_manual(values = c("#00AFBB", "#E7B800", "#FC4E07")) +
+  labs(x = 'Closest defender')
+  theme_bw()
+```
+
+
+
+```{r, includ=F}
+floaters <- readxl::read_excel('data/Curry 01.22.2022.xlsx', sheet = 'shot detail') %>% 
+  janitor::clean_names() %>% 
+  filter(str_detect(shot_type_detail, 'Floating')) %>% 
+  group_by(year) %>% 
+  summarize(fga = sum(fga), 
+            fgm = sum(fgm), 
+            fg_percent = fga/fgm*100, 
+            n_games = mean(n_games), 
+            fga_per_game = fga/n_games)
+```
+
+
+```{r, include=F}
+ggplot(floaters, aes(x = year, y = fga_per_game, fill = year)) + 
+  geom_bar(position = 'dodge', stat = 'identity') + 
+  geom_text(aes(label = round(fga_per_game, 1)), position = position_dodge(0.9), vjust = 1.5) + 
+  theme_bw()
+```
+
+
+
+```{r, warning=F, message=F}
+players <- c('looney', 'poole', 'curry', 'wiggins', 'draymond', 'iggy', 'lee', 'otto')
+players <- setNames(players, 1:8)
+players_df <- paste0('data/', players, '.csv') %>% 
+  purrr::map_df( ~read_csv(.x, col_types = cols(.default = 'c')), .id = 'Player') %>%
+  janitor::clean_names() %>% 
+  mutate_at(vars(rk, g, pts, fg_percent), as.numeric) %>% 
+  mutate(mp = as.numeric(lubridate::hm(mp))/3600, 
+         ppm = pts/mp, 
+         won = str_detect(x8, 'W')) %>% 
+  left_join(data.frame(players) %>% rownames_to_column(var = 'player'), by = c('player')) %>% 
+  select(-player) %>% 
+  rename(player = players) %>% 
+  mutate(player = str_to_title(player)) %>% 
+  filter(!is.na(g))
+
+gsw <- players_df %>% distinct(rk, won) %>% mutate(player = "GSW", outcome = ifelse(won, 'W', 'L'))
+```
+
+[Joe Viray](https://twitter.com/JoeVirayNBA) of [Golden State of Mind](www.goldenstateofmind.com) pointed out in his [insightful tweet](https://twitter.com/JoeVirayNBA/status/1484586439040208898) that through the first 27 games in which Curry played, Warriors used 1 starting lineup. After the Boston Celtics game (when Poole entered health and safety protocols), the coaches have used 10 different lineups in 17 games in which Curry has played. Even though Curry's 3 PT shooting dropped off well before that mark (see the first graph), it's possible that the lineup changes have exacerbated the shooting rhythm. Dray getting injured may have made things worse as well. 
+
+The plot below shows points scored per minute of game play (PPM) for all players who average more than 20 mins per games; Klay not included since he has only played a few games. Both 2 pointers and 3 pointers are included to account for players like Looney, Draymond and Iguodala who don't take many threes. Curry's decline in PPM coincides almost perfectly with the beginning of the lineup experimentation. Nearly all players except for Otto Porter Jr., Damion Lee, and Kevon Looney have been affected adversely though.  
+
+```{r}
+ggplot(players_df, aes(x = rk, y = ppm, color = player)) + 
+  geom_point(size = 2, alpha = 0.2) +
+  geom_labelsmooth(aes(label = player), text_smoothing = 30, size = 3.5,
+                   method = 'loess', formula = y ~ x, se = F, span = 0.7, 
+                   hjust = 'auto') + 
+  geom_textvline(xintercept = 28, linewidth = 1, linetype = 'dashed', label = 'Celtics game', hjust = 0.8, size = 3.5) +
+  geom_text(data = gsw, aes(x = rk, y = 0, label = outcome), size = 3, color = 'black') +
+  theme_bw() + 
+  theme(legend.position = 'none') + 
+  labs(x = 'Game', y = 'PPM', title = 'GSW Points Per Minute Comparison by Player', subtitle = 'Only players with >20 MPG included; minus Klay')
+
+```
+
+All in all, I think the lineup experimentation has had a huge impact on player efficiency including Curry along with a significant absence of Draymond. But, I don't think that the experimentation is bad. Warriors will almost certainly [make the playoffs](https://www.espn.com/nba/standings) and this is a good time to test out lineups that will hopefully pay dividends in the future against teams like Memphis who appear to Warriors' achilles heel. Plus, this has been a good opportunity for Kuminga to see some minutes. 
+
+At the same time though, it is hard to ignore that Curry himself has been a factor in his poor performance. Even if his performance has declined due to coaching, he was already shooting poorly prior to those changes taking effect. Part of this could be because he is not attacking the basket at his usual rate, which may be leading to poor performance from the outside and the other part could be just a mid-season slump. I for one like to see some more Curry floaters which will hopefully cascade into one of those Curry flurries. Because man it's about damn time and I miss them.  
+
